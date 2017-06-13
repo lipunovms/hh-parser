@@ -5,6 +5,7 @@ import sys
 import csv
 import re
 import config
+from terminaltables import AsciiTable
 
 pages_count = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 url_site = 'https://hh.ru/search/vacancy?clusters=true&enable_snippets=true&specialization=1&specialization=25&no_magic=true&area=90'
@@ -70,9 +71,6 @@ def parse(url, page_count):
             company = vacancy.find('div', class_="search-result-item__company").text
             date = vacancy.find('span', class_="b-vacancy-list-date").text
 
-            if config.SHOW_IN_CONSOLE:
-                print("%s / %s / %s / %s / %s" % (job, salary, avg_salary_vacancy, company, date))
-
             result.append({
                 "job": job,
                 "salary": salary,
@@ -84,11 +82,34 @@ def parse(url, page_count):
         print("progress %d%%" % round((page + 1) / page_count * 100))
         time.sleep(config.SLEEP_TIME)
 
+    if config.SHOW_IN_CONSOLE:
+        show_vacancies(result)
+
+    if config.CREATE_CSV:
+        save_vacancies(result, "vacancies.csv")
+
     avg_salary = avg_salary / counter_with_salary
     print("vacancies total count = %d" % counter_all)
     print("vacancies with salary = %d" % counter_with_salary)
     print("avg salary = %d" % avg_salary)
     return result
+
+
+def show_vacancies(vacancies_list):
+    table_data = [['Должность', 'Зарплата', 'Средняя зп', 'Компания', 'Дата']]
+
+    for vacancy in vacancies_list:
+        table_data.append([
+            vacancy['job'],
+            vacancy['salary'],
+            vacancy['avg_salary_vacancy'],
+            vacancy['company'],
+            vacancy['date']
+        ])
+
+    table = AsciiTable(table_data)
+    table.inner_row_border = True
+    print(table.table)
 
 
 def save_vacancies(vacancies_list, file):
@@ -107,4 +128,3 @@ def save_vacancies(vacancies_list, file):
 
 
 vacancies_all = parse(url_site, pages_count)
-save_vacancies(vacancies_all, "vacancies.csv")

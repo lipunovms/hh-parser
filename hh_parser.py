@@ -4,9 +4,8 @@ import time
 import sys
 import csv
 import re
+import config
 
-SLEEP_TIME = 2
-SHOW_IN_CONSOLE = True
 pages_count = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 url_site = 'https://hh.ru/search/vacancy?clusters=true&enable_snippets=true&specialization=1&specialization=25&no_magic=true&area=90'
 
@@ -39,13 +38,13 @@ def get_avg_salary(salary):
 
 def parse(url, page_count):
     """return list of vacancies"""
+
     result = []
     avg_salary = 0
     counter_with_salary = 0
     counter_all = 0
 
     for page in range(page_count):
-
         soup = bs(get_html_page(url + '&page=%d' % page), 'html.parser')
 
         # all vacancies
@@ -54,10 +53,12 @@ def parse(url, page_count):
         for vacancy in vacancies:
             counter_all += 1
             job = vacancy.find('a', {'class': 'search-result-item__name'}).string
-
             salary = vacancy.find('div', class_='b-vacancy-list-salary')
-            salary = salary.text if salary else 'Не указана'
 
+            if config.ONLY_WITH_SALARY and not salary:
+                continue
+
+            salary = salary.text if salary else 'Не указана'
             avg_salary_vacancy = get_avg_salary(salary)
 
             if avg_salary_vacancy is not None:
@@ -69,7 +70,7 @@ def parse(url, page_count):
             company = vacancy.find('div', class_="search-result-item__company").text
             date = vacancy.find('span', class_="b-vacancy-list-date").text
 
-            if SHOW_IN_CONSOLE:
+            if config.SHOW_IN_CONSOLE:
                 print("%s / %s / %s / %s / %s" % (job, salary, avg_salary_vacancy, company, date))
 
             result.append({
@@ -81,7 +82,7 @@ def parse(url, page_count):
             })
 
         print("progress %d%%" % round((page + 1) / page_count * 100))
-        time.sleep(SLEEP_TIME)
+        time.sleep(config.SLEEP_TIME)
 
     avg_salary = avg_salary / counter_with_salary
     print("vacancies total count = %d" % counter_all)
@@ -91,8 +92,8 @@ def parse(url, page_count):
 
 
 def save_vacancies(vacancies_list, file):
-    with open(file, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
+    with open(file, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
         writer.writerow(("Должность", "Зарплата", "Средняя зп", "Компания", "Дата"))
 
         for vacancy in vacancies_list:
